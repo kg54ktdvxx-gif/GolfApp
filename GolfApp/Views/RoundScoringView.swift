@@ -5,13 +5,26 @@ struct RoundScoringView: View {
     let course: GolfCourse
     @StateObject private var vm: RoundViewModel
     @Environment(\.modelContext) var modelContext
+    @Environment(LocationService.self) var locationService
     @Environment(\.dismiss) var dismiss
+    @State private var showFinishAlert = false
+    @State private var finishError: String?
     
     init(course: GolfCourse) {
         self.course = course
         let container = try! ModelContainer(for: Round.self)
         let context = ModelContext(container)
-        _vm = StateObject(wrappedValue: RoundViewModel(course: course, modelContext: context))
+        let locationService = LocationService()
+        _vm = StateObject(wrappedValue: RoundViewModel(
+            course: course,
+            modelContext: context,
+            locationService: locationService
+        ))
+    }
+    
+    var currentHole: Hole? {
+        guard vm.currentHole <= course.holes.count else { return nil }
+        return course.holes[vm.currentHole - 1]
     }
     
     var body: some View {
@@ -27,9 +40,14 @@ struct RoundScoringView: View {
                 }
                 Spacer()
                 VStack(alignment: .trailing) {
-                    Text("\(vm.gpsDistance)m")
-                        .font(.title3)
-                        .bold()
+                    if vm.isLoading {
+                        ProgressView()
+                            .frame(width: 20, height: 20)
+                    } else {
+                        Text("\(vm.gpsDistance)m")
+                            .font(.title3)
+                            .bold()
+                    }
                     Text("to green")
                         .font(.caption)
                         .foregroundColor(.gray)
@@ -40,7 +58,7 @@ struct RoundScoringView: View {
             .cornerRadius(8)
             
             // Current hole info
-            if let hole = vm.currentHoleInfo {
+            if let hole = currentHole {
                 HStack(spacing: 16) {
                     VStack(alignment: .leading) {
                         Text("Par")
@@ -60,19 +78,18 @@ struct RoundScoringView: View {
                             .bold()
                     }
                     
+                    VStack(alignment: .leading) {
+                        Text("Yardage")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                        Text("\(hole.averageYardage)")
+                            .font(.title2)
+                            .bold()
+                    }
+                    
                     Spacer()
                 }
                 .padding()
-            }
-            
-            // Error message
-            if let error = vm.error {
-                Text(error)
-                    .font(.caption)
-                    .foregroundColor(.red)
-                    .padding()
-                    .background(Color(.systemRed).opacity(0.1))
-                    .cornerRadius(4)
             }
             
             // Score buttons
@@ -83,50 +100,54 @@ struct RoundScoringView: View {
                 
                 HStack(spacing: 8) {
                     ForEach(2...5, id: \.self) { score in
-                        Button(String(score)) {
+                        ScoreButton(score: score) {
                             vm.recordScore(score)
                         }
-                        .buttonStyle(.bordered)
-                        .frame(maxWidth: .infinity)
                     }
                 }
                 
                 HStack(spacing: 8) {
                     ForEach(6...9, id: \.self) { score in
-                        Button(String(score)) {
+                        ScoreButton(score: score) {
                             vm.recordScore(score)
                         }
-                        .buttonStyle(.bordered)
-                        .frame(maxWidth: .infinity)
                     }
                 }
             }
             .padding()
             
+            // Error message
+            if let error = vm.error {
+                HStack {
+                    Image(systemName: "exclamationmark.circle")
+                        .foregroundColor(.orange)
+                    Text(error)
+                        .font(.caption)
+                }
+                .padding()
+                .background(Color(.systemOrange).opacity(0.1))
+                .cornerRadius(8)
+            }
+            
             Spacer()
             
             // Action buttons
             HStack(spacing: 12) {
-                Button(action: { vm.undoLastScore() }) {
-                    Label("Undo", systemImage: "arrow.uturn.left")
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color(.systemGray5))
-                        .foregroundColor(.primary)
-                        .cornerRadius(8)
+                if vm.currentHole > 1 {
+                    Button(action: { vm.undoLastScore() }) {
+                        Label("Undo", systemImage: "arrow.uturn.backward")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
                 }
                 
                 if vm.currentHole > 18 {
-                    Button(action: finishRound) {
+                    Button(action: { showFinishAlert = true }) {
                         Text("Finish Round")
-                            .font(.headline)
                             .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.green)
-                            .foregroundColor(.white)
-                            .cornerRadius(8)
                     }
-                    .disabled(vm.isLoading)
+                    .buttonStyle(.borderedProminent)
+                    .tint(.green)
                 }
             }
             .padding()
@@ -137,13 +158,34 @@ struct RoundScoringView: View {
         .onAppear {
             vm.startRound()
         }
+        .alert("Finish Round?", isPresented: $showFinishAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Finish", role: .destructive) {
+                finishRound()
+            }
+        } message: {
+            Text("Save this round?")
+        }
     }
     
     private func finishRound() {
-        vm.finishRound()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+        do {
+            try vm.finishRound()
             dismiss()
+        } catch {
+            finishError = error.localizedDescription
         }
+    }
+}
+
+struct ScoreButton: View {
+    let score: Int
+    let action: () -> Void
+    
+    var body: some View {
+        Button(String(score), action: action)
+            .buttonStyle(.bordered)
+            .frame(maxWidth: .infinity)
     }
 }
 

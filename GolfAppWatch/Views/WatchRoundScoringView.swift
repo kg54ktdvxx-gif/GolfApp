@@ -73,7 +73,7 @@ struct WatchRoundScoringView: View {
         } else {
             // No active round - show start button
             VStack(spacing: 12) {
-                Image(systemName: "golf.circle")
+                Image(systemImage: "golf.circle")
                     .font(.system(size: 32))
                     .foregroundColor(.blue)
                 
@@ -182,7 +182,7 @@ struct WatchCourseSelectionView: View {
                 let service = CourseService(modelContext: context)
                 courses = try service.getAllCourses()
             } catch {
-                print("Error loading courses: \(error)")
+                print("Error loading courses: \(error.localizedDescription)")
             }
             isLoading = false
         }

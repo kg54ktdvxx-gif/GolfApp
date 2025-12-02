@@ -3,8 +3,6 @@ import SwiftData
 
 struct CourseSearchView: View {
     @StateObject private var vm: CourseListViewModel
-    @State private var selectedCourse: GolfCourse?
-    @State private var showRoundView = false
     @Environment(\.modelContext) var modelContext
     
     init() {
