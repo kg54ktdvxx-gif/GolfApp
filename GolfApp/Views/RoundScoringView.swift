@@ -4,13 +4,25 @@ import GolfKit
 
 struct RoundScoringView: View {
     let course: GolfCourse
-    @State private var vm: RoundViewModel
+    @StateObject private var vm: RoundViewModel
     @Environment(\.modelContext) var modelContext
+    @Environment(LocationService.self) var locationService
     @Environment(\.dismiss) var dismiss
+    @State private var showFinishAlert = false
+    @State private var error: Error?
     
-    init(course: GolfCourse) {
+    init(course: GolfCourse, modelContext: ModelContext, locationService: LocationService) {
         self.course = course
-        _vm = State(initialValue: RoundViewModel(course: course, modelContext: ModelContext(ModelContainer(for: Round.self))))
+        _vm = StateObject(wrappedValue: RoundViewModel(
+            course: course,
+            modelContext: modelContext,
+            locationService: locationService
+        ))
+    }
+    
+    var currentHole: Hole? {
+        guard vm.currentHole <= course.holes.count else { return nil }
+        return course.holes[vm.currentHole - 1]
     }
     
     var body: some View {
@@ -26,9 +38,14 @@ struct RoundScoringView: View {
                 }
                 Spacer()
                 VStack(alignment: .trailing) {
-                    Text("\(vm.gpsDistance)m")
-                        .font(.title3)
-                        .bold()
+                    if vm.isLoadingLocation {
+                        ProgressView()
+                            .frame(width: 20, height: 20)
+                    } else {
+                        Text("\(vm.gpsDistance)m")
+                            .font(.title3)
+                            .bold()
+                    }
                     Text("to green")
                         .font(.caption)
                         .foregroundColor(.gray)
@@ -39,8 +56,7 @@ struct RoundScoringView: View {
             .cornerRadius(8)
             
             // Current hole info
-            if vm.currentHole <= course.holes.count {
-                let hole = course.holes[vm.currentHole - 1]
+            if let hole = currentHole {
                 HStack(spacing: 16) {
                     VStack(alignment: .leading) {
                         Text("Par")
@@ -60,6 +76,15 @@ struct RoundScoringView: View {
                             .bold()
                     }
                     
+                    VStack(alignment: .leading) {
+                        Text("Yardage")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                        Text("\(hole.averageYardage)")
+                            .font(.title2)
+                            .bold()
+                    }
+                    
                     Spacer()
                 }
                 .padding()
@@ -73,41 +98,57 @@ struct RoundScoringView: View {
                 
                 HStack(spacing: 8) {
                     ForEach(2...5, id: \.self) { score in
-                        Button(String(score)) {
+                        ScoreButton(score: score) {
                             vm.recordScore(score)
                         }
-                        .buttonStyle(.bordered)
-                        .frame(maxWidth: .infinity)
                     }
                 }
                 
                 HStack(spacing: 8) {
                     ForEach(6...9, id: \.self) { score in
-                        Button(String(score)) {
+                        ScoreButton(score: score) {
                             vm.recordScore(score)
                         }
-                        .buttonStyle(.bordered)
-                        .frame(maxWidth: .infinity)
                     }
                 }
             }
             .padding()
             
-            Spacer()
-            
-            // Finish button
-            if vm.currentHole > 18 {
-                Button(action: finishRound) {
-                    Text("Finish Round")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.green)
-                        .foregroundColor(.white)
-                        .cornerRadius(8)
+            // Error message
+            if let error = vm.error {
+                HStack {
+                    Image(systemName: "exclamationmark.circle")
+                        .foregroundColor(.orange)
+                    Text(error.errorDescription ?? "Location error")
+                        .font(.caption)
                 }
                 .padding()
+                .background(Color(.systemOrange).opacity(0.1))
+                .cornerRadius(8)
             }
+            
+            Spacer()
+            
+            // Action buttons
+            HStack(spacing: 12) {
+                if vm.currentHole > 1 {
+                    Button(action: { vm.undoScore() }) {
+                        Label("Undo", systemImage: "arrow.uturn.backward")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                }
+                
+                if vm.currentHole > 18 {
+                    Button(action: { showFinishAlert = true }) {
+                        Text("Finish Round")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.green)
+                }
+            }
+            .padding()
         }
         .padding()
         .navigationTitle("Scoring")
@@ -115,62 +156,36 @@ struct RoundScoringView: View {
         .onAppear {
             vm.startRound()
         }
+        .alert("Finish Round?", isPresented: $showFinishAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Finish", role: .destructive) {
+                finishRound()
+            }
+        } message: {
+            Text("Save this round?")
+        }
     }
     
     private func finishRound() {
-        vm.finishRound()
-        dismiss()
-    }
-}
-
-@MainActor
-final class RoundViewModel: ObservableObject {
-    @Published var round: Round?
-    @Published var currentHole: Int = 1
-    @Published var gpsDistance: Int = 0
-    
-    let course: GolfCourse
-    let modelContext: ModelContext
-    private let locationService = LocationService()
-    
-    init(course: GolfCourse, modelContext: ModelContext) {
-        self.course = course
-        self.modelContext = modelContext
-    }
-    
-    func startRound() {
-        round = Round(
-            id: UUID().uuidString,
-            courseId: course.id,
-            date: Date(),
-            scores: Array(repeating: 0, count: 18)
-        )
-        locationService.requestLocationPermission()
-        updateGPS()
-    }
-    
-    func recordScore(_ score: Int) {
-        guard var r = round else { return }
-        r.scores[currentHole - 1] = score
-        round = r
-        currentHole += 1
-        updateGPS()
-    }
-    
-    func finishRound() {
-        guard let r = round else { return }
-        modelContext.insert(r)
-        try? modelContext.save()
-    }
-    
-    private func updateGPS() {
-        Task {
-            gpsDistance = locationService.getDistance(to: CLLocationCoordinate2D(latitude: course.lat, longitude: course.lon))
+        do {
+            try vm.finishRound()
+            dismiss()
+        } catch {
+            self.error = error
         }
     }
 }
 
-import CoreLocation
+struct ScoreButton: View {
+    let score: Int
+    let action: () -> Void
+    
+    var body: some View {
+        Button(String(score), action: action)
+            .buttonStyle(.bordered)
+            .frame(maxWidth: .infinity)
+    }
+}
 
 #Preview {
     let mockCourse = GolfCourse(
@@ -183,5 +198,15 @@ import CoreLocation
         handicap: 2,
         holes: []
     )
-    RoundScoringView(course: mockCourse)
+    
+    let config = ModelConfiguration(isStoredInMemoryOnly: true)
+    let container = try! ModelContainer(for: Round.self, configurations: config)
+    let modelContext = ModelContext(container)
+    let locationService = LocationService()
+    
+    RoundScoringView(
+        course: mockCourse,
+        modelContext: modelContext,
+        locationService: locationService
+    )
 }
