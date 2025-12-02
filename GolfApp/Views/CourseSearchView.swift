@@ -1,31 +1,42 @@
 import SwiftUI
-import GolfKit
+import SwiftData
 
 struct CourseSearchView: View {
-    @State private var searchText = ""
-    @State private var courses: [GolfCourse] = []
-    @State private var isLoading = false
+    @StateObject private var vm: CourseListViewModel
     @State private var selectedCourse: GolfCourse?
     @State private var showRoundView = false
+    @Environment(\.modelContext) var modelContext
     
-    private let courseService = CourseService(modelContext: ModelContext(ModelContainer(for: GolfCourse.self)))
-    
-    var filteredCourses: [GolfCourse] {
-        if searchText.isEmpty {
-            return courses
-        }
-        return courses.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+    init() {
+        let container = try! ModelContainer(for: GolfCourse.self)
+        let context = ModelContext(container)
+        _vm = StateObject(wrappedValue: CourseListViewModel(modelContext: context))
     }
     
     var body: some View {
         NavigationStack {
-            VStack {
-                SearchBar(text: $searchText)
+            VStack(spacing: 0) {
+                SearchBar(text: $vm.searchText)
                     .padding()
                 
-                if isLoading {
+                if vm.isLoading {
                     ProgressView()
-                } else if filteredCourses.isEmpty {
+                        .frame(maxHeight: .infinity, alignment: .center)
+                } else if let error = vm.error {
+                    VStack(spacing: 12) {
+                        Image(systemName: "exclamationmark.circle")
+                            .font(.system(size: 48))
+                            .foregroundColor(.red)
+                        Text("Error")
+                            .font(.headline)
+                        Text(error)
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                            .multilineTextAlignment(.center)
+                    }
+                    .frame(maxHeight: .infinity, alignment: .center)
+                    .padding()
+                } else if vm.filteredCourses.isEmpty {
                     VStack(spacing: 16) {
                         Image(systemName: "map.circle")
                             .font(.system(size: 48))
@@ -35,7 +46,7 @@ struct CourseSearchView: View {
                     }
                     .frame(maxHeight: .infinity, alignment: .center)
                 } else {
-                    List(filteredCourses) { course in
+                    List(vm.filteredCourses) { course in
                         NavigationLink(destination: CourseDetailView(course: course)) {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(course.name)
@@ -56,20 +67,8 @@ struct CourseSearchView: View {
             }
             .navigationTitle("Courses")
             .onAppear {
-                loadCourses()
+                vm.loadCourses()
             }
-        }
-    }
-    
-    private func loadCourses() {
-        isLoading = true
-        Task {
-            do {
-                courses = try await courseService.searchCourses(query: "")
-            } catch {
-                print("Error loading courses: \(error)")
-            }
-            isLoading = false
         }
     }
 }

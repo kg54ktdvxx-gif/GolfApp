@@ -3,6 +3,7 @@ import SwiftData
 
 struct ContentView: View {
     @State private var selectedTab: Tab = .courses
+    @Environment(\.modelContext) var modelContext
     
     enum Tab {
         case courses

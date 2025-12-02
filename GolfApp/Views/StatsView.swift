@@ -1,6 +1,5 @@
 import SwiftUI
 import SwiftData
-import GolfKit
 
 struct StatsView: View {
     @Query var rounds: [Round]
@@ -45,8 +44,8 @@ struct StatsView: View {
                             
                             HStack(spacing: 12) {
                                 StatCard(
-                                    title: "Best Score",
-                                    value: "\(statsService.getBestScore(rounds: rounds) ?? 0)",
+                                    title: "Best",
+                                    value: "\(stats.bestScore ?? 0)",
                                     icon: "star.fill"
                                 )
                                 

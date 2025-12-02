@@ -1,9 +1,9 @@
 import SwiftUI
-import GolfKit
 
 struct CourseDetailView: View {
     let course: GolfCourse
     @State private var showRoundView = false
+    @Environment(\.modelContext) var modelContext
     
     var body: some View {
         VStack(spacing: 16) {
@@ -43,7 +43,7 @@ struct CourseDetailView: View {
             .cornerRadius(8)
             
             VStack(alignment: .leading, spacing: 12) {
-                Text("Holes")
+                Text("Front 9")
                     .font(.headline)
                 
                 HStack(spacing: 8) {
@@ -61,6 +61,9 @@ struct CourseDetailView: View {
                         .cornerRadius(4)
                     }
                 }
+                
+                Text("Back 9")
+                    .font(.headline)
                 
                 HStack(spacing: 8) {
                     ForEach(course.holes.suffix(9), id: \.id) { hole in
