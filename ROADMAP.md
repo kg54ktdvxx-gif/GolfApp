@@ -1,24 +1,24 @@
 # GolfApp Roadmap
 
-## v0.1 (MVP) - Current
+## v0.1 (MVP) - ✅ Complete
 
 - [x] Project structure (iOS + watchOS + GolfKit)
 - [x] Course scraper (Python)
-- [ ] GolfCourse, Hole, Round models
-- [ ] CourseService, LocationService, StatsService
-- [ ] iOS: Course search view
-- [ ] iOS: Round scoring view
-- [ ] iOS: Stats dashboard
-- [ ] watchOS: Minimal scoring view
-- [ ] Unit tests (StatsService, CourseService)
+- [x] GolfCourse, Hole, Round models
+- [x] CourseService, LocationService, StatsService
+- [x] iOS: Course search view
+- [x] iOS: Round scoring view
+- [x] iOS: Stats dashboard
+- [x] watchOS: Minimal scoring view
+- [x] Unit tests (StatsService, CourseService)
 
-## v0.2 - Enhanced Stats
+## v0.2 - Enhanced Stats - ✅ Complete
 
-- [ ] Plays Like distances (elevation-adjusted)
-- [ ] Club recommendation engine
-- [ ] Fairways hit tracking
-- [ ] Detailed club stats
-- [ ] Score history chart
+- [x] Plays Like distances (elevation-adjusted)
+- [x] Club recommendation engine
+- [x] Fairways hit tracking
+- [x] Detailed club stats
+- [x] Score history chart
 
 ## v0.3 - Shot Tracker
 

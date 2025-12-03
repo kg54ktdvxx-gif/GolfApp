@@ -1,8 +1,11 @@
 import SwiftUI
+import GolfKit
 
 struct WatchStatsView: View {
     let rounds: [Round]
     private let statsService = StatsService()
+    
+    typealias RoundStats = StatsService.Stats
     
     var stats: RoundStats {
         statsService.calculateStats(rounds: rounds)

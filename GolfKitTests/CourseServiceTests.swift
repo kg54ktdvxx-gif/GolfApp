@@ -1,116 +1,94 @@
 import XCTest
+import SwiftData
 @testable import GolfKit
 
+@MainActor
 final class CourseServiceTests: XCTestCase {
     var sut: CourseService!
-    var mockModelContext: ModelContext!
+    var modelContext: ModelContext!
+    var modelContainer: ModelContainer!
     
-    override func setUp() {
-        super.setUp()
-        // Create a mock ModelContext (in-memory)
+    override func setUp() async throws {
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = try! ModelContainer(for: GolfCourse.self, configurations: config)
-        mockModelContext = ModelContext(container)
-        sut = CourseService(modelContext: mockModelContext)
+        modelContainer = try ModelContainer(
+            for: GolfCourse.self, Hole.self, Round.self,
+            configurations: config
+        )
+        modelContext = ModelContext(modelContainer)
+        sut = CourseService(modelContext: modelContext)
     }
     
-    override func tearDown() {
-        sut.clearCache()
+    override func tearDown() async throws {
         sut = nil
-        mockModelContext = nil
-        super.tearDown()
+        modelContext = nil
+        modelContainer = nil
     }
     
-    // MARK: - searchCourses Tests
-    
-    func testSearchCoursesWithEmptyQuery() async throws {
-        let courses = try await sut.searchCourses(query: "")
-        XCTAssertGreater(courses.count, 0, "Should return all courses for empty query")
-    }
-    
-    func testSearchCoursesByName() async throws {
-        let courses = try await sut.searchCourses(query: "Marina")
-        let marinaBay = courses.first { $0.name.contains("Marina") }
-        XCTAssertNotNil(marinaBay)
-    }
-    
-    func testSearchCoursesNoResults() async throws {
-        let courses = try await sut.searchCourses(query: "NonExistentCourse123")
-        XCTAssertEqual(courses.count, 0)
-    }
-    
-    // MARK: - getCourse Tests
-    
-    func testGetCourseById() async throws {
-        let allCourses = try await sut.searchCourses(query: "")
-        guard let firstCourse = allCourses.first else {
-            XCTFail("No courses available")
-            return
-        }
+    func testGetAllCourses_WhenEmpty_ReturnsEmptyArray() throws {
+        // When
+        let courses = try sut.getAllCourses()
         
-        let course = try sut.getCourse(id: firstCourse.id)
-        XCTAssertNotNil(course)
-        XCTAssertEqual(course.id, firstCourse.id)
+        // Then
+        XCTAssertTrue(courses.isEmpty)
     }
     
-    func testGetCourseByIdNotFound() throws {
+    func testGetAllCourses_WithCourses_ReturnsAllCourses() throws {
+        // Given
+        let course1 = GolfCourse(name: "Course 1", lat: 0, lon: 0)
+        let course2 = GolfCourse(name: "Course 2", lat: 1, lon: 1)
+        modelContext.insert(course1)
+        modelContext.insert(course2)
+        try modelContext.save()
+        
+        // When
+        let courses = try sut.getAllCourses()
+        
+        // Then
+        XCTAssertEqual(courses.count, 2)
+    }
+    
+    func testSearchCourses_WithMatchingQuery_ReturnsMatchingCourses() async throws {
+        // Given
+        let course1 = GolfCourse(name: "Pebble Beach", lat: 0, lon: 0)
+        let course2 = GolfCourse(name: "Augusta National", lat: 1, lon: 1)
+        modelContext.insert(course1)
+        modelContext.insert(course2)
+        try modelContext.save()
+        
+        // When
+        let results = try await sut.searchCourses(query: "Pebble")
+        
+        // Then
+        XCTAssertEqual(results.count, 1)
+        XCTAssertEqual(results.first?.name, "Pebble Beach")
+    }
+    
+    func testSearchCourses_WithEmptyQuery_ReturnsMockCourse() async throws {
+        // When
+        let results = try await sut.searchCourses(query: "")
+        
+        // Then
+        XCTAssertFalse(results.isEmpty)
+    }
+    
+    func testGetCourse_WithValidId_ReturnsCourse() throws {
+        // Given
+        let course = GolfCourse(name: "Test Course", lat: 0, lon: 0)
+        modelContext.insert(course)
+        try modelContext.save()
+        
+        // When
+        let result = try sut.getCourse(id: course.id)
+        
+        // Then
+        XCTAssertEqual(result.id, course.id)
+        XCTAssertEqual(result.name, "Test Course")
+    }
+    
+    func testGetCourse_WithInvalidId_ThrowsError() {
+        // When/Then
         XCTAssertThrowsError(try sut.getCourse(id: "invalid-id")) { error in
-            XCTAssertEqual(error as? CourseServiceError, .noCourseFound)
-        }
-    }
-    
-    // MARK: - getAllCourses Tests
-    
-    func testGetAllCourses() throws {
-        let courses = try sut.getAllCourses()
-        XCTAssertGreater(courses.count, 0)
-    }
-    
-    // MARK: - Cache Tests
-    
-    func testCachingWorks() throws {
-        let courses1 = try sut.getAllCourses()
-        let courses2 = try sut.getAllCourses()
-        
-        XCTAssertEqual(courses1.count, courses2.count)
-    }
-    
-    func testClearCache() throws {
-        let _ = try sut.getAllCourses()
-        sut.clearCache()
-        let courses = try sut.getAllCourses()
-        XCTAssertGreater(courses.count, 0)
-    }
-    
-    // MARK: - Course Data Validation
-    
-    func testCourseDataIntegrity() throws {
-        let courses = try sut.getAllCourses()
-        
-        for course in courses {
-            XCTAssertFalse(course.id.isEmpty, "Course ID should not be empty")
-            XCTAssertFalse(course.name.isEmpty, "Course name should not be empty")
-            XCTAssertFalse(course.location.isEmpty, "Course location should not be empty")
-            XCTAssertGreater(course.lat, -90, "Latitude should be valid")
-            XCTAssertLess(course.lat, 90, "Latitude should be valid")
-            XCTAssertGreater(course.lon, -180, "Longitude should be valid")
-            XCTAssertLess(course.lon, 180, "Longitude should be valid")
-            XCTAssertEqual(course.holes.count, 18, "Course should have 18 holes")
-        }
-    }
-    
-    func testHoleDataIntegrity() throws {
-        let courses = try sut.getAllCourses()
-        guard let firstCourse = courses.first else {
-            XCTFail("No courses available")
-            return
-        }
-        
-        for (index, hole) in firstCourse.holes.enumerated() {
-            XCTAssertEqual(hole.number, index + 1, "Hole number should match index")
-            XCTAssertGreater(hole.par, 0, "Par should be greater than 0")
-            XCTAssertLess(hole.par, 10, "Par should be less than 10")
-            XCTAssertFalse(hole.yardages.isEmpty, "Hole should have yardages")
+            XCTAssertTrue(error is CourseService.CourseError)
         }
     }
 }

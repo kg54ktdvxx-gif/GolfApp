@@ -79,6 +79,7 @@ struct RoundScoringView: View {
                             .bold()
                     }
                     
+                    
                     VStack(alignment: .leading) {
                         Text("Yardage")
                             .font(.caption)
@@ -86,6 +87,22 @@ struct RoundScoringView: View {
                         Text("\(hole.averageYardage)")
                             .font(.title2)
                             .bold()
+                    }
+                    
+                    if hole.elevation != 0 {
+                        VStack(alignment: .leading) {
+                            Text("Plays Like")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                            HStack(spacing: 2) {
+                                Text("\(hole.playsLikeDistance)")
+                                    .font(.title2)
+                                    .bold()
+                                Image(systemName: hole.elevation > 0 ? "arrow.up" : "arrow.down")
+                                    .font(.caption)
+                                    .foregroundColor(hole.elevation > 0 ? .red : .green)
+                            }
+                        }
                     }
                     
                     Spacer()

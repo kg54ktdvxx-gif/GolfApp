@@ -34,21 +34,30 @@ public final class Hole {
     public var par: Int
     public var handicap: Int
     public var distance: Int // in yards/meters
+    public var elevation: Int = 0 // Elevation change in feet (positive = uphill, negative = downhill)
     
     public var averageYardage: Int {
         distance
+    }
+    
+    /// Distance adjusted for elevation (plays like distance)
+    /// Formula: Add 1 yard per 10 feet of elevation gain
+    public var playsLikeDistance: Int {
+        let elevationAdjustment = elevation / 10
+        return distance + elevationAdjustment
     }
     
     // Coordinates for the green center, front, back could be added here
     public var lat: Double?
     public var lon: Double?
     
-    public init(id: String = UUID().uuidString, number: Int, par: Int, handicap: Int, distance: Int, lat: Double? = nil, lon: Double? = nil) {
+    public init(id: String = UUID().uuidString, number: Int, par: Int, handicap: Int, distance: Int, elevation: Int = 0, lat: Double? = nil, lon: Double? = nil) {
         self.id = id
         self.number = number
         self.par = par
         self.handicap = handicap
         self.distance = distance
+        self.elevation = elevation
         self.lat = lat
         self.lon = lon
     }

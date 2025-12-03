@@ -59,6 +59,7 @@ struct StatsView: View {
                                 )
                             }
                             
+                            
                             HStack(spacing: 12) {
                                 StatCard(
                                     title: "Total Putts",
@@ -72,6 +73,24 @@ struct StatsView: View {
                                     icon: "divide"
                                 )
                             }
+                            
+                            HStack(spacing: 12) {
+                                StatCard(
+                                    title: "Fairways Hit",
+                                    value: "\(stats.totalFairwaysHit)",
+                                    icon: "flag.fill"
+                                )
+                                
+                                StatCard(
+                                    title: "Fairway %",
+                                    value: String(format: "%.1f%%", stats.fairwayHitPercentage),
+                                    icon: "percent"
+                                )
+                            }
+                            }
+                            
+                            // Score history chart
+                            ScoreHistoryChart(rounds: rounds)
                             
                             // Recent rounds
                             VStack(alignment: .leading, spacing: 12) {

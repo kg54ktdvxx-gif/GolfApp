@@ -26,6 +26,8 @@ struct GolfAppApp: App {
                     GolfCourse.self,
                     Hole.self,
                     Round.self,
+                    Club.self,
+                    Shot.self,
                 ]),
                 isStoredInMemoryOnly: false
             )

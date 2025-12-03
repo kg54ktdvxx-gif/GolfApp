@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import GolfKit
 
 struct WatchRoundScoringView: View {
     @State private var activeRound: Round?
