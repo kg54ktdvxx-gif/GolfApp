@@ -1,9 +1,12 @@
 import SwiftUI
 import SwiftData
+import GolfKit
 
 struct StatsView: View {
     @Query var rounds: [Round]
     private let statsService = StatsService()
+    
+    typealias RoundStats = StatsService.Stats
     
     var stats: RoundStats {
         statsService.calculateStats(rounds: rounds)

@@ -9,9 +9,21 @@ public final class CourseService {
         self.modelContext = modelContext
     }
     
-    public enum CourseError: Error {
+    public enum CourseError: Error, LocalizedError {
         case notFound
         case decodingError
+        
+        public var errorDescription: String? {
+            switch self {
+            case .notFound: return "Course not found"
+            case .decodingError: return "Failed to decode course data"
+            }
+        }
+    }
+    
+    public func getAllCourses() throws -> [GolfCourse] {
+        let descriptor = FetchDescriptor<GolfCourse>()
+        return try modelContext.fetch(descriptor)
     }
     
     public func searchCourses(query: String) async throws -> [GolfCourse] {
@@ -55,7 +67,7 @@ public struct MockData {
         name: "Augusta National",
         lat: 33.5021,
         lon: -82.0226,
-        address: "2604 Washington Rd, Augusta, GA 30904",
+        location: "2604 Washington Rd, Augusta, GA 30904",
         holes: (1...18).map { i in
             Hole(number: i, par: 4, handicap: i, distance: 400)
         }

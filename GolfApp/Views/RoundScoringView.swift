@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import GolfKit
 
 struct RoundScoringView: View {
     let course: GolfCourse
@@ -196,8 +197,6 @@ struct ScoreButton: View {
         location: "Pebble Beach, CA",
         lat: 36.5627,
         lon: -121.9496,
-        par: 72,
-        handicap: 2,
         holes: []
     )
     RoundScoringView(course: mockCourse)

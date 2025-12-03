@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import GolfKit
 
 struct CourseSearchView: View {
     @StateObject private var vm: CourseListViewModel
@@ -50,7 +51,7 @@ struct CourseSearchView: View {
                                 Text(course.name)
                                     .font(.headline)
                                 HStack {
-                                    Text(course.location)
+                                    Text(course.location ?? "Unknown Location")
                                         .font(.caption)
                                         .foregroundColor(.gray)
                                     Spacer()

@@ -8,15 +8,21 @@ public final class GolfCourse {
     public var name: String
     public var lat: Double
     public var lon: Double
-    public var address: String?
+    public var location: String? // Renamed from address
+    public var handicap: Int = 0 // Placeholder for course handicap/rating
     public var holes: [Hole]
     
-    public init(id: String = UUID().uuidString, name: String, lat: Double, lon: Double, address: String? = nil, holes: [Hole] = []) {
+    public var par: Int {
+        holes.reduce(0) { $0 + $1.par }
+    }
+    
+    public init(id: String = UUID().uuidString, name: String, lat: Double, lon: Double, location: String? = nil, handicap: Int = 0, holes: [Hole] = []) {
         self.id = id
         self.name = name
         self.lat = lat
         self.lon = lon
-        self.address = address
+        self.location = location
+        self.handicap = handicap
         self.holes = holes
     }
 }
@@ -28,6 +34,10 @@ public final class Hole {
     public var par: Int
     public var handicap: Int
     public var distance: Int // in yards/meters
+    
+    public var averageYardage: Int {
+        distance
+    }
     
     // Coordinates for the green center, front, back could be added here
     public var lat: Double?

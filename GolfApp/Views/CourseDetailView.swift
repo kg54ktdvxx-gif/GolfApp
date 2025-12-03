@@ -1,4 +1,5 @@
 import SwiftUI
+import GolfKit
 
 struct CourseDetailView: View {
     let course: GolfCourse
@@ -13,7 +14,7 @@ struct CourseDetailView: View {
                     .bold()
                 
                 HStack {
-                    Label(course.location, systemImage: "location.fill")
+                    Label(course.location ?? "Unknown Location", systemImage: "location.fill")
                         .font(.caption)
                     Spacer()
                 }
@@ -109,9 +110,6 @@ struct CourseDetailView: View {
         id: "test-1",
         name: "Pebble Beach",
         location: "Pebble Beach, CA",
-        lat: 36.5627,
-        lon: -121.9496,
-        par: 72,
         handicap: 2,
         holes: []
     )

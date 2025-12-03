@@ -1,5 +1,6 @@
 import Foundation
 import SwiftData
+import GolfKit
 
 /// View model for managing course search and browsing.
 @MainActor
@@ -74,7 +75,7 @@ final class CourseListViewModel: ObservableObject {
         } else {
             filteredCourses = courses.filter { course in
                 course.name.localizedCaseInsensitiveContains(searchText) ||
-                course.location.localizedCaseInsensitiveContains(searchText)
+                (course.location ?? "").localizedCaseInsensitiveContains(searchText)
             }
         }
     }
